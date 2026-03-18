@@ -847,7 +847,7 @@ HARD RULES:
 
   // ── GEMINI API KEY — paste yours here ──────────────────────────────
   // Get a FREE key at: aistudio.google.com → Get API Key
-  const GEMINI_KEY = 'AIzaSyCYiAFeTN6zh2lg3hJzXAAADGuCaNDbqKQ';
+  const GEMINI_KEY = 'PASTE_YOUR_GEMINI_KEY_HERE';
 
   // Build the full prompt by combining system + user message
   // Gemini Flash doesn't use a separate system role — we combine them
@@ -861,7 +861,7 @@ Think through the 5-step process silently, then output ONLY the final prompt. No
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

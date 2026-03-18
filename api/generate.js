@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  const { goal, system, mode } = req.body;
+  const { goal, system, mode, imageBase64, imageType } = req.body;
 
   if (!goal || !system) {
     return res.status(400).json({ error: 'Missing goal or system prompt' });
@@ -23,16 +23,34 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'API key not configured on server' });
   }
 
-  // Use fast small model for context questions, full model for prompt generation
-  const model = mode === 'questions'
-    ? 'llama-3.1-8b-instant'       // ~0.5s — just needs to output JSON questions
-    : 'llama-3.3-70b-versatile';   // full quality for the actual prompt
-
+  // Use fast model for questions, vision model if image, full model for prompts
+  let model = mode === 'questions' ? 'llama-3.1-8b-instant' : 'llama-3.3-70b-versatile';
   const maxTokens = mode === 'questions' ? 400 : 1800;
 
-  const userMessage = mode === 'questions'
-    ? goal
-    : `USER GOAL: "${goal}"\n\nThink through the 5-step process silently, then output ONLY the final prompt. Nothing before it, nothing after it except the TIP line.`;
+  // Build user message — include image if provided
+  let userContent;
+  if (imageBase64 && imageType && mode !== 'questions') {
+    // Use vision-capable model for image requests
+    model = 'llama-3.2-11b-vision-preview';
+    userContent = [
+      {
+        type: 'image_url',
+        image_url: {
+          url: `data:${imageType};base64,${imageBase64}`
+        }
+      },
+      {
+        type: 'text',
+        text: mode === 'questions'
+          ? goal
+          : `USER GOAL: "${goal}"\n\nAn image has been provided above. Analyse it carefully and incorporate specific details from it into the prompt you generate. Output ONLY the final prompt. Nothing before it, nothing after it except the TIP line.`
+      }
+    ];
+  } else {
+    userContent = mode === 'questions'
+      ? goal
+      : `USER GOAL: "${goal}"\n\nThink through the 5-step process silently, then output ONLY the final prompt. Nothing before it, nothing after it except the TIP line.`;
+  }
 
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -47,7 +65,7 @@ export default async function handler(req, res) {
         temperature: 0.7,
         messages: [
           { role: 'system', content: system },
-          { role: 'user', content: userMessage }
+          { role: 'user', content: userContent }
         ]
       })
     });
